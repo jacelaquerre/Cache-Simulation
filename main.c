@@ -7,7 +7,22 @@
 #include <string.h>
 #include <math.h>
 
-int memory[1024];
+// the size of a memory address, in bits
+const int MEMORY_SIZE = 1024;
+// the size of the cache, in bytes
+const int CACHE_SIZE = 1000;
+// this size of a cache block, in bytes
+const int BLOCK_SIZE = 64;
+// the associativity of the cache
+const int ASSOCIATIVITY = 1;
+// Write-Back = 0
+// Write-Through = 1
+const int WRITE_BACK = 0;
+
+const int TAG_LENGTH = 8;
+
+int memory[MEMORY_SIZE];
+int cache[CACHE_SIZE];
 void initialize();
 
 typedef struct Word {
@@ -35,7 +50,7 @@ void initialize() {
         }
     }
     // Print Array
-    for(i = 0; i < size; ++i) {
+    for (i = 0; i < size; ++i) {
         if (!(i & 3) && i != 0) {
             printf(" ");
         }
@@ -44,6 +59,10 @@ void initialize() {
 }
 
 Word readWord(unsigned int address) {
+    int memory_block = address / BLOCK_SIZE;
+    int byte_range = memory_block * BLOCK_SIZE;
+    int slot = (byte_range / BLOCK_SIZE) % TAG_LENGTH;
+    int tag = (byte_range / BLOCK_SIZE) / TAG_LENGTH;
 
 }
 
