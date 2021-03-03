@@ -4,4 +4,4 @@ project(Cahce_Simulation C)
 set(CMAKE_C_STANDARD 11)
 
 add_executable(Cahce_Simulation
-        main.c)
+        cache.c cache.h)

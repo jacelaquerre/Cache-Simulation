@@ -7,56 +7,7 @@
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
-
-// the size of a memory address, in bits
-#define MEMORY_SIZE  65536
-// the size of the cache, in bytes
-#define CACHE_SIZE  1024
-// this size of a cache block, in bytes
-#define BLOCK_SIZE 64
-// the associativity of the cache
-#define ASSOCIATIVITY 1
-// Write-Back = 0
-// Write-Through = 1
-#define WRITE_BACK 0
-// Teg Length
-#define TAG_LENGTH 8
-
-int memory[MEMORY_SIZE];
-
-typedef struct Word {
-    int word[4];
-} Word;
-
-typedef struct CacheBlock {
-    int cacheBlock[BLOCK_SIZE];
-    int tag;
-    // 0 - not valid, 1 = valid
-    int valid;
-    // 0 - not dirty, 1 = dirty
-    int dirty;
-} CacheBlock;
-
-typedef struct CacheSet {
-    CacheBlock cacheBlock[CACHE_SIZE/BLOCK_SIZE];  // # of blocks
-    int tagQueue[(CACHE_SIZE/4) / (4 * ASSOCIATIVITY)];
-} CacheSet;
-
-typedef struct Cache {
-    CacheSet cache[CACHE_SIZE];
-    // Write-Back = 0, Write-Through = 1
-    int write;
-} Cache;
-
-
-
-Word readWord(unsigned int address);
-void writeWord(unsigned int address, Word word);
-void initialize();
-void output();
-char * binaryConverter(int address);
-char * toArray(int number);
-
+#include "cache.h"
 
 int main() {
 //    CacheBlock cacheBlock = { .write = WRITE_BACK, .cache = 123 };
@@ -64,6 +15,7 @@ int main() {
 //    Cache cache = { .write = WRITE_BACK, .cache = cacheSet };
     initialize();
     output();
+    readWord(2460);
     //printf("%s", binaryConverter(2460));
     return 0;
 }
@@ -98,15 +50,15 @@ void output() {
     printf("Cache Size = %d\n", CACHE_SIZE);
     printf("Block Size = %d\n", BLOCK_SIZE);
     printf("#Blocks = %d\n", CACHE_SIZE / BLOCK_SIZE);
-    printf("#Sets = %d\n", (CACHE_SIZE/4) / (4 * ASSOCIATIVITY));
+    printf("#Sets = %d\n", (CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY);
     printf("Associativity = %d\n", ASSOCIATIVITY);
-    printf("Tag Length = %d\n", TAG_LENGTH);
+    printf("Tag Length = %d\n", (CACHE_SIZE/BLOCK_SIZE) - ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY) - ASSOCIATIVITY);
     if (WRITE_BACK == 0) {
         printf("Write Back\n");
     } else {
         printf("Write Through\n");
     }
-    printf("-----------------------------------");
+    printf("-----------------------------------\n");
 }
 
 char * binaryConverter(int address) {
@@ -149,17 +101,45 @@ char * toArray(int number) {
     return arr;
 }
 
-Word readWord(unsigned int address) {
-    int memory_block = address / BLOCK_SIZE;
-    int byte_range = memory_block * BLOCK_SIZE;
-    int slot = (byte_range / BLOCK_SIZE) % TAG_LENGTH;
-    int tag = (byte_range / BLOCK_SIZE) / TAG_LENGTH;
-    int i;
-    for (i = 0; i < (byte_range + (BLOCK_SIZE - 1)); ++i) {
-        //memory[i] = cache[slot];
+int validation(int address) {
+    // 0 = false, 1 = true
+    int valid = 0;
+    // check 4 byte alignment
+    if (address >= 0 && address < MEMORY_SIZE) {
+        if (!(address & 0x3)) {
+            valid = 1;
+        }
     }
+    return valid;
+}
+
+Word readWord(unsigned int address) {
+    if (validation((int)address) == 0) {
+        printf("Address not 4 byte aligned or in valid memory range!");
+        Word word = { .word = -1};
+        return word;
+    }
+    int memory_block = (int)address / BLOCK_SIZE;
+    printf("%d\n", memory_block);
+    int byte_range = memory_block * BLOCK_SIZE;
+    printf("%d\n", byte_range);
+    int tagLength = ((CACHE_SIZE/BLOCK_SIZE) - ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY) - ASSOCIATIVITY);
+    int slot = ((int)address / BLOCK_SIZE) % tagLength;
+    printf("%d\n", slot);
+    int tag = ((int)address / BLOCK_SIZE) / tagLength;
+    printf("%d\n", tag);
+    int i;
+//    for (i = 0; i < (byte_range + (BLOCK_SIZE - 1)); ++i) {
+//        //memory[i] = cache[slot];
+//    }
+    //int wordArray[4] =
+    //for (i = 0; i < (byte_range + (BLOCK_SIZE - 1)); ++i) {
+    Word word = { .word = (int)address};
+    return word;
 }
 
 void writeWord(unsigned int address, Word word) {
-
+    if (validation((int)address) == 0) {
+        printf("Address not 4 byte aligned or in valid memory range!");
+    }
 }
