@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
-project(Cahce_Simulation C)
+project(Cache_Simulation C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(Cahce_Simulation
+add_executable(Cache_Simulation
         cache.c cache.h)
