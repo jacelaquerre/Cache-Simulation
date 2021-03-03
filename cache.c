@@ -15,7 +15,8 @@ int main() {
 //    Cache cache = { .write = WRITE_BACK, .cache = cacheSet };
     initialize();
     output();
-    readWord(2460);
+    readWord(46916);
+    displayBinary(46916);
     //printf("%s", binaryConverter(2460));
     return 0;
 }
@@ -52,7 +53,7 @@ void output() {
     printf("#Blocks = %d\n", CACHE_SIZE / BLOCK_SIZE);
     printf("#Sets = %d\n", (CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY);
     printf("Associativity = %d\n", ASSOCIATIVITY);
-    printf("Tag Length = %d\n", (CACHE_SIZE/BLOCK_SIZE) - ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY) - ASSOCIATIVITY);
+    printf("Tag Length = %.0f\n", (CACHE_SIZE/BLOCK_SIZE) - (log2((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY)) - (log2(BLOCK_SIZE)));
     if (WRITE_BACK == 0) {
         printf("Write Back\n");
     } else {
@@ -61,51 +62,18 @@ void output() {
     printf("-----------------------------------\n");
 }
 
-char * binaryConverter(int address) {
-    char *binary = (char *)malloc(sizeof(char) * 81);
-    int i;
-    int count = 0;
-    // Find how many digits in #
-    do {
-        ++count;
-        address /= 10;
-    } while(address != 0);
-
-    char addressArr[count];
-    strncpy(addressArr, toArray(address), count);
-    for(i = 0; i < strlen(addressArr); ++i){
-        switch(addressArr[i]){
-            case '0': strcat(binary, "0000"); break;
-            case '1': strcat(binary, "0001"); break;
-            case '2': strcat(binary, "0010"); break;
-            case '3': strcat(binary, "0011"); break;
-            case '4': strcat(binary, "0100"); break;
-            case '5': strcat(binary, "0101"); break;
-            case '6': strcat(binary, "0110"); break;
-            case '7': strcat(binary, "0111"); break;
-            case '8': strcat(binary, "1000"); break;
-            case '9': strcat(binary, "1001"); break;
-        }
-    }
-    return binary;
-}
-
-// Turn into address into array of its digits
-char * toArray(int number) {
-    unsigned int length = (int)(log10f((float)number)) + 1;
-    char * arr = (char *) malloc(length * sizeof(char)), * curr = arr;
-    do {
-        *curr++ = number % 10;
-        number /= 10;
-    } while (number != 0);
-    return arr;
+void displayBinary(int n) {
+    char bistr[1000];
+    itoa(n, bistr, 2); //2 means binary u can convert n upto base 36
+    printf("%s", bistr);
 }
 
 int validation(int address) {
     // 0 = false, 1 = true
     int valid = 0;
-    // check 4 byte alignment
+    // check if address is in memory range
     if (address >= 0 && address < MEMORY_SIZE) {
+        // check 4 byte alignment
         if (!(address & 0x3)) {
             valid = 1;
         }
@@ -120,14 +88,25 @@ Word readWord(unsigned int address) {
         return word;
     }
     int memory_block = (int)address / BLOCK_SIZE;
-    printf("%d\n", memory_block);
+    printf("memory_block %d\n", memory_block);
     int byte_range = memory_block * BLOCK_SIZE;
-    printf("%d\n", byte_range);
-    int tagLength = ((CACHE_SIZE/BLOCK_SIZE) - ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY) - ASSOCIATIVITY);
-    int slot = ((int)address / BLOCK_SIZE) % tagLength;
-    printf("%d\n", slot);
-    int tag = ((int)address / BLOCK_SIZE) / tagLength;
-    printf("%d\n", tag);
+    printf("byte_range %d\n", byte_range);
+    float tagLength = (CACHE_SIZE/BLOCK_SIZE) - (log2((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY)) - (log2(BLOCK_SIZE));
+    printf("tegLength %d\n", (int) tagLength);
+    int slot = ((int)address / BLOCK_SIZE) % (int) tagLength;
+    printf("slot %d\n", slot);
+    int tag = (((int)address / BLOCK_SIZE) / (int) tagLength);
+    printf("tag %d\n", tag);
+    int blockIndex = 0;
+    // OUTPUT
+    printf("[addr=%d", (int)address);
+    printf(" index=%d", slot);
+    printf(" blockIndex=%d", blockIndex);
+    printf(" tag=%d", tag);
+    // read miss etc
+    printf(" word=%d", (int)address);
+    printf(" (%d", byte_range);
+    printf(" - %d)]\n", (byte_range + (BLOCK_SIZE - 1)));
     int i;
 //    for (i = 0; i < (byte_range + (BLOCK_SIZE - 1)); ++i) {
 //        //memory[i] = cache[slot];
