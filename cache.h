@@ -12,7 +12,7 @@
 // this size of a cache block, in bytes
 #define BLOCK_SIZE 64
 // the associativity of the cache
-#define ASSOCIATIVITY 4
+#define ASSOCIATIVITY 1
 // Write-Back = 0
 // Write-Through = 1
 #define WRITE_BACK 0
@@ -47,8 +47,8 @@ Word readWord(unsigned int address);
 void writeWord(unsigned int address, Word word);
 void initialize();
 void output();
-char * binaryConverter(int address);
-char * toArray(int number);
 int validation(int address);
+void displayBinary(int n);
 
 #endif //CAHCE_SIMULATION_CACHE_H
+
