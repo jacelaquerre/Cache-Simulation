@@ -17,7 +17,8 @@ Cache cache = { .cacheSets = {}, .write = WRITE_BACK };
 int main() {
     initialize();
     output();
-
+    Word word = {};
+    //  TESTING FOR testAwb.out / testAwt.out
     printf("Several addresses that map to the same set:");
     readWord(1152);
     readWord(2176);
@@ -28,7 +29,7 @@ int main() {
     readWord(4224);
     readWord(3200);
 
-    Word word = { .word = 17};
+    word.word = 17;
     writeWord(7312, word);
 
     readWord(7320);
@@ -42,6 +43,20 @@ int main() {
 
     word.word = 7;
     writeWord(8320, word);
+
+    readWord(8320);
+
+    // TESTING FOR testBwb.out / testBwt.out
+//    readWord(46916);
+//    readWord(46932);
+//    readWord(12936);
+//    readWord(13964);
+//
+//    word.word = 40;
+//    writeWord(46956, word);
+//
+//    readWord(46956);
+//    readWord(56132);
 
     return 0;
 }
@@ -62,7 +77,7 @@ void initialize() {
             memory[i] = 0;
         }
     }
-    // Print Array
+    // Print Memory Array
 //    for (i = 0; i < size; ++i) {
 //        if (!(i & 3) && i != 0) {
 //            printf(" ");
@@ -74,7 +89,7 @@ void initialize() {
     for (i = 0; i < (CACHE_SIZE / BLOCK_SIZE); ++i) {
         cacheSet.cacheBlocks[i] = cacheBlock;
     }
-    for (i = 0; i < (CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY; ++i) {
+    for (i = 0; i < ((CACHE_SIZE / BLOCK_SIZE) / ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY)); ++i) {
         cacheSet.tagQueue[i] = -1;
     }
     // # of sets
@@ -125,9 +140,7 @@ Word readWord(unsigned int address) {
         Word word = { .word = -1};
         return word;
     }
-    //    CacheBlock cacheBlock = { .valid = 1, .dirty = 0, .tag = 0, .cacheBlock = {} };
-    //    CacheSet cacheSet = { .tagQueue = {}, .cacheBlocks = {} };
-    //    Cache cache = { .cacheSets = {}, .write = WRITE_BACK };
+
     int memory_block = (int)address / BLOCK_SIZE;
     int byte_range = memory_block * BLOCK_SIZE;
     float tagLength = (CACHE_SIZE / BLOCK_SIZE) - (log2((CACHE_SIZE / BLOCK_SIZE) / ASSOCIATIVITY)) - (log2(BLOCK_SIZE));
@@ -140,31 +153,38 @@ Word readWord(unsigned int address) {
     // Update Tag Queue
     int tagAdded = 0;
     int readHit = 0;
-    for (i = 0; i < (CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY; ++i) {
+    for (i = 0; i < ((CACHE_SIZE / BLOCK_SIZE) / ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY)); ++i) {
         // Check for read hit
         if(cache.cacheSets[slot].tagQueue[i] == tag) {
             readHit = 1;
+            blockIndex = i;
             break;
         }
-        if (cache.cacheSets[slot].tagQueue[i] == -1) {
+        if (cache.cacheSets[slot].tagQueue[i] == -1 || cache.cacheSets[slot].tagQueue[i] == 0) {
             cache.cacheSets[slot].tagQueue[i] = tag;
             tagAdded = 1;
             blockIndex = i;
             break;
         }
     }
-    // LRU
+
+    // Evicting Tag
     if (tagAdded == 0 && readHit == 0) {
         if (lastReplacedIndex == -1) {
             lastReplacedIndex = 0;
         } else {
-            ++lastReplacedIndex;
+            if (lastReplacedIndex == ((CACHE_SIZE / BLOCK_SIZE) / ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY)) - 1) {
+                lastReplacedIndex = 0;
+            } else {
+                ++lastReplacedIndex;
+            }
         }
-        evictedTag = cache.cacheSets[slot].tagQueue[lastReplacedIndex];
         blockIndex = lastReplacedIndex;
+        evictedTag = cache.cacheSets[slot].tagQueue[lastReplacedIndex];
         cache.cacheSets[slot].tagQueue[lastReplacedIndex] = tag;
     }
 
+    // Move from memory on read miss
     if (readHit == 0) {
         // Move 64 byte from memory to cache block
         for (i = byte_range; i < (byte_range + (BLOCK_SIZE - 1)); ++i) {
@@ -175,19 +195,16 @@ Word readWord(unsigned int address) {
         // Update valid block
         cache.cacheSets[slot].cacheBlocks->valid = 1;
     }
-    Word word = { .word = 0};
+
     // Get word
-    if (cache.cacheSets[slot].cacheBlocks->dirty == 1) {
+    Word word = { .word = 0};
+    if (cache.cacheSets[slot].cacheBlocks->dirty == 1 && cache.cacheSets[slot].cacheBlocks->cacheBlock[address + 1] != 0) {
         word.word = cache.cacheSets[slot].cacheBlocks->cacheBlock[(int) address + 1];
     } else {
         word.word = (int) address;
     }
+
     // OUTPUT
-//    printf("memory_block %d\n", memory_block);
-//    printf("byte_range %d\n", byte_range);
-//    printf("tegLength %d\n", (int) tagLength);
-//    printf("slot %d\n", slot);
-//    printf("tag %d\n", tag);
     printf("\n(R) address is: %d ", (int)address);
     displayBinary((int)address);
     printf("\n[addr=%d", (int)address);
@@ -201,20 +218,19 @@ Word readWord(unsigned int address) {
     } else {
         printf(" read miss + replace;");
     }
-    // read miss etc
     printf(" word=%d", word.word);
     printf(" (%d", byte_range);
     printf(" - %d)]", (byte_range + (BLOCK_SIZE - 1)));
 
     // Print tag evict message
     if (tagAdded == 0 && readHit == 0) {
-        printf("\nEvict tag %d", evictedTag);
-        printf(", in blackIndex %d", blockIndex);
+        printf("\n[Evict tag %d", evictedTag);
+        printf(", in blackIndex %d]", blockIndex);
     }
 
     // Print tagQueue
     printf("\n[");
-    for (i = 0; i < ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY); ++i) {
+    for (i = 0; i < ((CACHE_SIZE / BLOCK_SIZE) / ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY)); ++i) {
         printf(" %d", cache.cacheSets[slot].tagQueue[i]);
     }
     printf(" ]");
@@ -227,9 +243,7 @@ void writeWord(unsigned int address, Word word) {
     if (validation((int)address) == 0) {
         printf("Address not 4 byte aligned or in valid memory range!");
     }
-    //    CacheBlock cacheBlock = { .valid = 1, .dirty = 0, .tag = 0, .cacheBlock = {} };
-    //    CacheSet cacheSet = { .tagQueue = {}, .cacheBlocks = {} };
-    //    Cache cache = { .cacheSets = {}, .write = WRITE_BACK };
+
     int memory_block = (int)address / BLOCK_SIZE;
     int byte_range = memory_block * BLOCK_SIZE;
     float tagLength = (CACHE_SIZE / BLOCK_SIZE) - (log2((CACHE_SIZE / BLOCK_SIZE) / ASSOCIATIVITY)) - (log2(BLOCK_SIZE));
@@ -242,28 +256,34 @@ void writeWord(unsigned int address, Word word) {
     // Update Tag Queue
     int tagAdded = 0;
     int writeHit = 0;
-    for (i = 0; i < (CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY; ++i) {
+    for (i = 0; i < ((CACHE_SIZE / BLOCK_SIZE) / ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY)); ++i) {
         // Check for read hit
         if(cache.cacheSets[slot].tagQueue[i] == tag) {
             writeHit = 1;
+            blockIndex = i;
             break;
         }
-        if (cache.cacheSets[slot].tagQueue[i] == -1) {
+        if (cache.cacheSets[slot].tagQueue[i] == -1 || cache.cacheSets[slot].tagQueue[i] == 0) {
             cache.cacheSets[slot].tagQueue[i] = tag;
             tagAdded = 1;
             blockIndex = i;
             break;
         }
     }
-    // LRU
+
+    // Evict Tag
     if (tagAdded == 0 && writeHit == 0) {
         if (lastReplacedIndex == -1) {
             lastReplacedIndex = 0;
         } else {
-            ++lastReplacedIndex;
+            if (lastReplacedIndex == ((CACHE_SIZE / BLOCK_SIZE) / ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY)) - 1) {
+                lastReplacedIndex = 0;
+            } else {
+                ++lastReplacedIndex;
+            }
         }
-        evictedTag = cache.cacheSets[slot].tagQueue[lastReplacedIndex];
         blockIndex = lastReplacedIndex;
+        evictedTag = cache.cacheSets[slot].tagQueue[lastReplacedIndex];
         cache.cacheSets[slot].tagQueue[lastReplacedIndex] = tag;
     }
 
@@ -284,11 +304,6 @@ void writeWord(unsigned int address, Word word) {
     cache.cacheSets[slot].cacheBlocks->dirty = 1;
 
     // OUTPUT
-//    printf("memory_block %d\n", memory_block);
-//    printf("byte_range %d\n", byte_range);
-//    printf("tegLength %d\n", (int) tagLength);
-//    printf("slot %d\n", slot);
-//    printf("tag %d\n", tag);
     printf("\n(W) address is: %d ", (int)address);
     displayBinary((int)address);
     printf("\n[addr=%d", (int)address);
@@ -309,13 +324,13 @@ void writeWord(unsigned int address, Word word) {
 
     // Print tag evict message
     if (tagAdded == 0 && writeHit == 0) {
-        printf("\nEvict tag %d", evictedTag);
-        printf(", in blackIndex %d", blockIndex);
+        printf("\n[Evict tag %d", evictedTag);
+        printf(", in blackIndex %d]", blockIndex);
     }
 
     // Print tagQueue
     printf("\n[");
-    for (i = 0; i < ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY); ++i) {
+    for (i = 0; i < ((CACHE_SIZE / BLOCK_SIZE) / ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY)); ++i) {
         printf(" %d", cache.cacheSets[slot].tagQueue[i]);
     }
     printf(" ]");

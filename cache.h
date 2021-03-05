@@ -34,7 +34,7 @@ typedef struct CacheBlock {
 
 typedef struct CacheSet {
     CacheBlock cacheBlocks[((CACHE_SIZE / BLOCK_SIZE) / ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY))];  // # of blocks divided by sets
-    int tagQueue[(CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY]; // # of sets
+    int tagQueue[((CACHE_SIZE / BLOCK_SIZE) / ((CACHE_SIZE/BLOCK_SIZE) / ASSOCIATIVITY))]; // # of blocks divided by sets
 } CacheSet;
 
 typedef struct Cache {
